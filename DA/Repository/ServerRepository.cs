@@ -18,9 +18,11 @@ namespace DA.Repository
             return entity;
         }
 
-        public Task ChangeDuration(int id,int duration)
+        public async Task ChangeDuration(int id,int duration)
         {
-            throw new NotImplementedException();
+           var server=await Get(id,true);
+            server.DurationInSecond = duration;
+            await _dbContext.SaveChangesAsync();
         }
 
         public Task<Server> Delete(Server entity)
@@ -40,9 +42,9 @@ namespace DA.Repository
         {
             return await _dbContext.Servers.AsNoTracking().FirstOrDefaultAsync(x => x.Name == name);
         }
-        public Task<List<Server>> GetAll()
+        public async Task<List<Server>> GetAll()
         {
-            throw new NotImplementedException();
+            return await _dbContext.Servers.AsNoTracking().ToListAsync();
         }
 
         public async Task Start(int id)

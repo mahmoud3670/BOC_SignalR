@@ -19,7 +19,7 @@ namespace DA.ServiceManager
             if (serverExist == null) {
                 server = new Server()
                 {
-                    DurationInSecond = 3,
+                    DurationInSecond = 3000,
                     IsOnline = true,
                     IsRunning=true,
                     LastRun = DateTime.Now,
@@ -37,17 +37,19 @@ namespace DA.ServiceManager
             
         }
 
-        public async Task Update() { 
-            server.IsOnline = true;
+        public async Task IsOnline(bool isOnline= true) { 
+            server.IsOnline = isOnline;
             server.LastRun = DateTime.Now;
             await _repository.Update(server);
         }
+       
 
         public async Task Refresh()
         {
-            var x= await _repository.Get(server.Id, false);
+           
             server = await _repository.Get(server.Id, false);
             
         }
+        
     }
 }

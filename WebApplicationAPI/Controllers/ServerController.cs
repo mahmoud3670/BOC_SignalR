@@ -37,15 +37,16 @@ namespace WebApplicationAPI.Controllers
         [HttpGet("Stop/{id}")]
         public async Task<IActionResult> Stop(int id)
         {
-            await _hubContext.Clients.All.SendAsync("ReceiveWorkerControl", id.ToString(), "Stop");
+            await _hubContext.Clients.All.SendAsync("ReceiveWorkerControl", id.ToString(), "stop",0);
             await _repository.Stop(id);
             return Ok();
         }
 
-        [HttpGet("Stop/{id}/{durationInSecond}")]
-        public async Task<IActionResult> Stop(int id,int durationInSecond)
+        [HttpGet("ChangeDuration/{id}/{durationInSecond}")]
+        public async Task<IActionResult> ChangeDuration(int id,int durationInSecond)
         {
-            await _hubContext.Clients.All.SendAsync("ReceiveWorkerControl", id.ToString(), "setdelay", durationInSecond*60);
+            durationInSecond = durationInSecond * 1000;
+            await _hubContext.Clients.All.SendAsync("ReceiveWorkerControl", id.ToString(), "setdelay", durationInSecond);
             await _repository.ChangeDuration(id, durationInSecond);
             return Ok();
         }

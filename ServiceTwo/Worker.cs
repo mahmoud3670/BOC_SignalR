@@ -1,4 +1,5 @@
 using DA.Interfaces;
+using DA.ServiceManager;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ServiceTwo
@@ -13,6 +14,8 @@ namespace ServiceTwo
         private string _workerId;
         private bool _isRunning;
         private int _delay = 1000;
+
+        private CancellationTokenSource _delayCancellationTokenSource = new();
         public Worker(ILogger<Worker> logger, ISeveiceManager seveiceManager)
         {
             _logger = logger;
@@ -24,44 +27,69 @@ namespace ServiceTwo
 
         }
 
+
+        public override async Task StartAsync(CancellationToken cancellationToken)
+        {
+            // Quick initialization
+            
+            await InitService(cancellationToken);
+            await base.StartAsync(cancellationToken);
+            _logger.LogInformation("Worker starting...");
+        }
+
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-           await InitService(stoppingToken);
-
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                if (_isRunning)
+                try
                 {
-                    _logger.LogInformation($"Worker {_workerId} is working...");
-                    await Task.Delay(_delay, stoppingToken);
+                    using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, _delayCancellationTokenSource.Token);
+                    CancellationToken token = linkedTokenSource.Token;
+                    //redice
+                    await _seveiceManager.Refresh();
+                    if (_isRunning)
+                    {
+                        _logger.LogInformation("server two OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOON");
+                        await _seveiceManager.IsOnline();
+                        await Task.Delay(_delay, token);
+                    }
+                    else
+                    {
+                        await Task.Delay(_delay, token); // Idle delay
+                        _logger.LogInformation("server two OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOF");
+                    }
                 }
-                else
+                catch (TaskCanceledException)
                 {
-                    await Task.Delay(1000, stoppingToken); // Idle delay
-                    _logger.LogInformation("server two OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOF");
+                    // Reset the cancellation token if it was canceled for an interval update
+                    if (_delayCancellationTokenSource.IsCancellationRequested)
+                    {
+                        _logger.LogInformation("Delay canceled due to interval update.");
+                        _delayCancellationTokenSource.Dispose();
+                        _delayCancellationTokenSource = new CancellationTokenSource();
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Worker stopping.");
+                        break;
+                    }
                 }
-                //if (_seveiceManager.Server.IsRunning)
-                //{
+                catch (Exception ex)
+                {
 
-
-                //    await _seveiceManager.Refresh();
-                //    await _seveiceManager.Update();
-                //    _logger.LogInformation("server two OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOON");
-                //}
-                //else
-                //{
-                //    await _seveiceManager.Refresh();
-                //    _logger.LogInformation("server two OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOF");
-
-                //}
-
-                //await Task.Delay(TimeSpan.FromSeconds(_seveiceManager.Server.DurationInSecond), stoppingToken);
+                    throw;
+                }
+               
+              
             }
         }
 
         public override async Task StopAsync(CancellationToken stoppingToken)
         {
+
+            await _seveiceManager.IsOnline(false);
             await _connection.StopAsync();
             await _connection.DisposeAsync();
             await base.StopAsync(stoppingToken);
@@ -71,6 +99,8 @@ namespace ServiceTwo
         {
             await _seveiceManager.Init("service two");
             _workerId = _seveiceManager.Server.Id.ToString();
+            _isRunning = _seveiceManager.Server.IsRunning;
+            _delay = _seveiceManager.Server.DurationInSecond;
 
             _connection.On<string, string, int?>("ReceiveWorkerControl", (workerId, command, delay) =>
             {
@@ -108,6 +138,7 @@ namespace ServiceTwo
                     if (delay.HasValue)
                     {
                         _delay = delay.Value;
+                        _delayCancellationTokenSource.Cancel();
                         _logger.LogInformation($"Worker {_workerId} delay set to {_delay} ms.");
                     }
                     break;

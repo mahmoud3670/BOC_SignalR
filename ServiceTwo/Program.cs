@@ -9,7 +9,17 @@ namespace ServiceTwo
             var builder = Host.CreateApplicationBuilder(args);
             builder.Services.AddHostedService<Worker>();
             builder.Services.AddPersistenceServices(builder.Configuration.GetConnectionString("DefaultConnection"));
-            var host = builder.Build();
+
+            builder.Logging.AddConsole();
+            builder.Logging.AddDebug();
+
+         
+
+
+             var host = builder.Build();
+            
+            
+            
             host.Run();
         }
     }

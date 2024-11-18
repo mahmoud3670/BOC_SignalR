@@ -11,31 +11,50 @@ namespace ServiceOne
             _logger = logger;
             _seveiceManager = seveiceManager;
         }
+        public override async Task StartAsync(CancellationToken cancellationToken)
+        {
+            // Quick initialization
+          
+            await _seveiceManager.Init("service one");
+            await base.StartAsync(cancellationToken);
+            _logger.LogInformation("Worker starting...");
+        }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await _seveiceManager.Init("service one");
-            
             while (!stoppingToken.IsCancellationRequested)
             {
-
-                if (_seveiceManager.Server.IsRunning)
-                {
-                   
-
-                        await _seveiceManager.Refresh();
-                        await _seveiceManager.Update();
-                    _logger.LogInformation("server one OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOON");
-                }
-                else
+                try
                 {
                     await _seveiceManager.Refresh();
-                    _logger.LogInformation("server one OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOF");
 
+                    if (_seveiceManager.Server.IsRunning)
+                    {
+                        _logger.LogInformation("------------server one OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOON-------------");
+                        await _seveiceManager.IsOnline();
+
+                    }
+                    else
+                    {
+                        _logger.LogInformation("-------------server one OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOF------------------");
+                    }
+
+                    await Task.Delay(_seveiceManager.Server.DurationInSecond, stoppingToken);
                 }
+                catch (Exception ex)
+                {
 
-                await Task.Delay(TimeSpan.FromSeconds(_seveiceManager.Server.DurationInSecond), stoppingToken);
+                    throw;
+                }
+               
             }
+        }
+        public override async Task StopAsync(CancellationToken stoppingToken)
+        {
+
+            await _seveiceManager.IsOnline(false);
+          
+            await base.StopAsync(stoppingToken);
         }
     }
 }

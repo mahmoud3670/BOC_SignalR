@@ -11,7 +11,7 @@ namespace DA.Interfaces
     {
         public Server Server { get; }
         Task Init(string name);
-        Task Update();
+        Task IsOnline(bool isOnline = true);
         Task Refresh();
     }
 }
